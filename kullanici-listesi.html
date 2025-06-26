@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Kullanıcı Listesi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background-color: #f4f6f9; }
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sol { font-size: 20px; font-weight: bold; }
+    .sag button {
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .icerik { padding: 20px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th { background-color: #324960; color: white; }
+    tr:hover { background-color: #f1f1f1; }
+    .islem-btn { cursor: pointer; color: #007bff; margin-right: 10px; }
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%;
+      height: 100%; background: rgba(0, 0, 0, 0.4);
+      justify-content: center; align-items: center;
+    }
+    .modal-icerik {
+      background: white; padding: 20px; border-radius: 8px;
+      width: 90%; max-width: 500px;
+    }
+    .modal-icerik input, .modal-icerik select {
+      width: 100%; padding: 10px; margin: 8px 0; font-size: 15px;
+    }
+    .kapat-btn {
+      float: right; font-size: 20px; cursor: pointer; color: #c0392b;
+    }
+    .kaydet-btn {
+      background: #324960; color: white; border: none;
+      padding: 10px 16px; border-radius: 6px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sol">Karaağaç Fatih - Kullanıcı Yönetimi</div>
+    <div class="sag">
+      <button onclick="window.location.href='panel.html'">← Geri Dön</button>
+      <button onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+  </header>
+
+  <div class="icerik">
+    <table id="kullaniciTablosu">
+      <thead>
+        <tr>
+          <th>Ad Soyad</th>
+          <th>Email</th>
+          <th>Rol</th>
+          <th>İşlemler</th>
+        </tr>
+      </thead>
+      <tbody id="kullaniciBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Düzenleme Modal -->
+  <div class="modal" id="duzenleModal">
+    <div class="modal-icerik">
+      <span class="kapat-btn" onclick="modalKapat()">&times;</span>
+      <h3>Kullanıcıyı Düzenle</h3>
+      <input type="text" id="duzenleAd" placeholder="Ad Soyad">
+      <input type="text" id="duzenleRol" placeholder="Rol (talebe/personel/admin)">
+      <textarea id="duzenleIzin" placeholder="İzin kodları (virgülle ayırın)"></textarea>
+      <button class="kaydet-btn" onclick="kullaniciGuncelle()">Kaydet</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, signOut, deleteUser
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import {
+      getFirestore, collection, getDocs, doc, updateDoc, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176",
+      measurementId: "G-6XT79LLYK1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let seciliKullaniciId = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return (window.location.href = "index.html");
+      await kullanicilariYukle();
+    });
+
+    async function kullanicilariYukle() {
+      const snapshot = await getDocs(collection(db, "kullanicilar"));
+      const tbody = document.getElementById("kullaniciBody");
+      tbody.innerHTML = "";
+
+      snapshot.forEach(docu => {
+        const veri = docu.data();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${veri.ad || "-"}</td>
+          <td>${veri.email}</td>
+          <td>${veri.role}</td>
+          <td>
+            <span class="islem-btn" onclick="duzenle('${docu.id}', '${veri.ad}', '${veri.role}', \`${Object.keys(veri.izinler || {}).join(",")}\`)">✏️</span>
+            <span class="islem-btn" onclick="sil('${docu.id}')">🗑️</span>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.duzenle = function (id, ad, rol, izinler) {
+      seciliKullaniciId = id;
+      document.getElementById("duzenleAd").value = ad;
+      document.getElementById("duzenleRol").value = rol;
+      document.getElementById("duzenleIzin").value = izinler;
+      document.getElementById("duzenleModal").style.display = "flex";
+    };
+
+    window.modalKapat = function () {
+      document.getElementById("duzenleModal").style.display = "none";
+    };
+
+    window.kullaniciGuncelle = async function () {
+      const ad = document.getElementById("duzenleAd").value;
+      const rol = document.getElementById("duzenleRol").value;
+      const izinInput = document.getElementById("duzenleIzin").value;
+      const izinler = {};
+      izinInput.split(",").map(i => i.trim()).forEach(k => izinler[k] = true);
+
+      const ref = doc(db, "kullanicilar", seciliKullaniciId);
+      await updateDoc(ref, { ad, role: rol, izinler });
+      modalKapat();
+      await kullanicilariYukle();
+    };
+
+    window.sil = async function (id) {
+      if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+      await deleteDoc(doc(db, "kullanicilar", id));
+      await kullanicilariYukle();
+    };
+
+    window.cikisYap = async function () {
+      await signOut(auth);
+      window.location.href = "index.html";
+    };
+  </script>
+</body>
+</html>
+    

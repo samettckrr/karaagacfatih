@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kullanıcı Ekle</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+    }
+
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .header-right button {
+      margin-left: 10px;
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .icerik {
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    .btn-ekle {
+      background-color: #324960;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-icerik {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .form-group small {
+      color: red;
+      font-size: 12px;
+    }
+
+    .erisim-baslik {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .erisimler label {
+      display: block;
+      margin: 4px 0;
+    }
+
+    .modal-buttons {
+      text-align: right;
+      margin-top: 20px;
+    }
+
+    .modal-buttons button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .btn-kaydet {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .btn-kapat {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .modal-bilgi {
+      display: none;
+      position: fixed;
+      z-index: 20;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .geri-btn {
+      margin: 20px auto;
+      display: block;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4a637d;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">Karaağaç Fatih</div>
+    <div class="header-right">
+      <button onclick="alert('Bildirimler yakında!')">🔔</button>
+      <button onclick="alert('Profil sayfası yakında!')">👤</button>
+      <button onclick="alert('Ayarlar yakında!')">⚙️</button>
+      <button onclick="window.location.href='index.html'">Çıkış Yap</button>
+    </div>
+  </header>
+
+  <div class="icerik">
+    <button class="geri-btn" onclick="history.back()">⬅️ Geri Dön</button>
+    <button class="btn-ekle" onclick="modalAc()">➕ Kullanıcı Ekle</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-icerik">
+      <div class="form-group">
+        <label for="adsoyad">Ad Soyad</label>
+        <input type="text" id="adsoyad" placeholder="Örn: Samet ÇAKIR" />
+      </div>
+      <div class="form-group">
+        <label for="email">E-posta</label>
+        <input type="email" id="email" placeholder="ornek@gmail.com" oninput="validateEmail()" />
+        <small id="emailHata" style="display:none;">Lütfen geçerli bir Gmail adresi girin.</small>
+      </div>
+      <div class="form-group">
+        <label for="sifre">Şifre</label>
+        <input type="password" id="sifre" oninput="sifreGucluMu()" />
+        <small id="sifreDurum">Şifre durumu: -</small>
+      </div>
+      <div class="form-group">
+        <label for="rol">Rol</label>
+        <select id="rol">
+          <option value="admin">Admin</option>
+          <option value="personel">Personel</option>
+          <option value="talebe">Talebe</option>
+          <option value="nehari">Nehari</option>
+          <option value="diger">Diğer</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Erişim Yetkileri</label>
+        <div class="erisimler" id="erisimListesi">
+          <!-- Otomatik erişim alanları eklenecek -->
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-kapat" onclick="modalKapat()">Vazgeç</button>
+        <button class="btn-kaydet" onclick="kullaniciKaydet()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bilgi" id="modalBilgi">✅ Kullanıcı başarıyla eklendi.</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const erisimler = [
+      { panel: "Talebe Paneli", sayfa: "Talebe Listesi", kod: "panel.talebe.talebe-liste" },
+      { panel: "Talebe Paneli", sayfa: "İmtihan Durumu", kod: "panel.talebe.imtihan" },
+      { panel: "Personel Paneli", sayfa: "Aylık Verim", kod: "panel.personel.verim" },
+      { panel: "Diğer", sayfa: "Kasa Durumu", kod: "panel.diger.kasa" },
+      { panel: "Kullanıcı", sayfa: "Kullanıcı Ekle", kod: "panel.kullanici-ekle" }
+    ];
+
+    const listeDiv = document.getElementById("erisimListesi");
+    erisimler.forEach(item => {
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" value="${item.kod}"> ${item.panel} > ${item.sayfa}`;
+      listeDiv.appendChild(label);
+    });
+
+    window.modalAc = () => document.getElementById("modal").style.display = "flex";
+    window.modalKapat = () => document.getElementById("modal").style.display = "none";
+
+    window.validateEmail = () => {
+      const email = document.getElementById("email").value;
+      const hata = document.getElementById("emailHata");
+      hata.style.display = email.includes("@gmail.com") ? "none" : "block";
+    };
+
+    window.sifreGucluMu = () => {
+      const sifre = document.getElementById("sifre").value;
+      const durum = document.getElementById("sifreDurum");
+      if (sifre.length < 6) durum.textContent = "Şifre durumu: Zayıf";
+      else if (sifre.match(/[A-Z]/) && sifre.match(/[0-9]/)) durum.textContent = "Şifre durumu: Güçlü";
+      else durum.textContent = "Şifre durumu: Orta";
+    };
+
+    window.kullaniciKaydet = async () => {
+      const adsoyad = document.getElementById("adsoyad").value;
+      const email = document.getElementById("email").value;
+      const sifre = document.getElementById("sifre").value;
+      const rol = document.getElementById("rol").value;
+      const izinler = {};
+
+      document.querySelectorAll("#erisimListesi input[type=checkbox]").forEach(c => {
+        izinler[c.value] = c.checked;
+      });
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, sifre);
+        const uid = userCredential.user.uid;
+
+        await setDoc(doc(db, "kullanicilar", uid), {
+          adsoyad, email, rol, izinler,
+          girisLog: [],
+          sayfaLog: []
+        });
+
+        document.getElementById("modal").style.display = "none";
+        const bilgi = document.getElementById("modalBilgi");
+        bilgi.style.display = "block";
+        document.addEventListener("click", () => bilgi.style.display = "none", { once: true });
+      } catch (err) {
+        alert("Hata: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kullanıcı Logları</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+    }
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    header .sol {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    header .sag button {
+      margin-left: 10px;
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .sekme-container {
+      display: flex;
+      padding: 10px 20px 0;
+    }
+    .sekme {
+      margin-right: 30px;
+      padding-bottom: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      border-bottom: 3px solid transparent;
+    }
+    .sekme.aktif {
+      border-color: #324960;
+    }
+    .icerik {
+      padding: 20px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 14px;
+      text-align: left;
+    }
+    th {
+      background-color: #e6e8eb;
+    }
+    input[type="text"] {
+      padding: 8px;
+      font-size: 14px;
+      width: 250px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      header .sag {
+        margin-top: 10px;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      td {
+        border: none;
+        padding: 5px 0;
+      }
+      th {
+        display: none;
+      }
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        width: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sol">Karaağaç Fatih - Kullanıcı Logları</div>
+    <div class="sag">
+      <button onclick="window.history.back()">← Geri Dön</button>
+      <button onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+  </header>
+
+  <div class="sekme-container">
+    <div class="sekme aktif" onclick="sekmeGoster('giris')">Giriş Kayıtları</div>
+    <div class="sekme" onclick="sekmeGoster('sayfa')">Sayfa Erişimleri</div>
+  </div>
+
+  <div class="icerik">
+    <input type="text" id="aramaInput" placeholder="E-posta veya sayfa ara..." oninput="filtrele()">
+    <table>
+      <thead>
+        <tr>
+          <th>E-posta</th>
+          <th>UID</th>
+          <th>Sayfa</th>
+          <th>Zaman</th>
+          <th>Tarayıcı</th>
+        </tr>
+      </thead>
+      <tbody id="loglar"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176",
+      measurementId: "G-6XT79LLYK1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let tumLoglar = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return location.href = "index.html";
+
+      const uid = user.uid;
+      const userRef = (await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js")).doc(db, "kullanicilar", uid);
+      const snap = await (await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js")).getDoc(userRef);
+      if (!snap.exists() || snap.data().role !== "admin") {
+        location.href = "yetki-yok.html";
+        return;
+      }
+
+      loglariGetir();
+    });
+
+    async function loglariGetir() {
+      const q = query(collection(db, "kullanici_log"), orderBy("zaman", "desc"));
+      const querySnapshot = await getDocs(q);
+      tumLoglar = [];
+      querySnapshot.forEach((doc) => {
+        tumLoglar.push(doc.data());
+      });
+      tabloGoster(tumLoglar);
+    }
+
+    function tabloGoster(loglar) {
+      const tbody = document.getElementById("loglar");
+      tbody.innerHTML = "";
+      loglar.forEach(log => {
+        const tr = document.createElement("tr");
+        const zaman = log.zaman?.toDate().toLocaleString("tr-TR") || "-";
+        tr.innerHTML = `
+          <td data-label="E-posta">${log.email || "-"}</td>
+          <td data-label="UID">${log.uid || "-"}</td>
+          <td data-label="Sayfa">${log.sayfa || "-"}</td>
+          <td data-label="Zaman">${zaman}</td>
+          <td data-label="Tarayıcı">${log.userAgent?.slice(0, 60) || "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.filtrele = function () {
+      const arama = document.getElementById("aramaInput").value.toLowerCase();
+      const filtreli = tumLoglar.filter(log =>
+        (log.email || "").toLowerCase().includes(arama) ||
+        (log.sayfa || "").toLowerCase().includes(arama)
+      );
+      tabloGoster(filtreli);
+    };
+
+    window.sekmeGoster = function (tur) {
+      document.querySelectorAll(".sekme").forEach(s => s.classList.remove("aktif"));
+      if (tur === "giris") {
+        document.querySelectorAll(".sekme")[0].classList.add("aktif");
+        tabloGoster(tumLoglar.filter(l => l.sayfa === "panel.html"));
+      } else {
+        document.querySelectorAll(".sekme")[1].classList.add("aktif");
+        tabloGoster(tumLoglar.filter(l => l.sayfa !== "panel.html"));
+      }
+    };
+
+    window.cikisYap = async function () {
+      await signOut(auth);
+      window.location.href = "index.html";
+    };
+  </script>
+</body>
+</html>

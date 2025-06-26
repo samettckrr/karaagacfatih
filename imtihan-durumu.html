@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İmtihan Durumu</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fefdfb;
+      padding: 20px;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    select.girdi {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    select.girmedi {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    button.kaydet {
+      padding: 6px 12px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .filtre-alan {
+      margin-top: 30px;
+    }
+    .filtre-sonuc {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+    }
+    .istatistikler {
+      text-align: center;
+      margin-bottom: 30px;
+      background-color: #fff8ec;
+      border: 1px solid #f0e4d7;
+      border-radius: 8px;
+      padding: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tekamül İmtihan Durumu</h1>
+  <div class="istatistikler">
+    <p><strong>İstatistik:</strong></p>
+    <p>Telhis İmtihanı: <span class="girmis" id="telhis-girdi">0 girdi</span> / <span class="kalmis" id="telhis-kaldi">0 kaldı</span></p>
+    <p>Diğer: <span class="girmis" id="diger-girdi">0 girdi</span> / <span class="kalmis" id="diger-kaldi">0 kaldı</span></p>
+    <p>Kıraat İmtihanı: <span class="girmis" id="kiraat-girdi">0 girdi</span> / <span class="kalmis" id="kiraat-kaldi">0 kaldı</span></p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Talebe Adı</th>
+        <th>Telhis</th>
+        <th>Diğer</th>
+        <th>Kıraat</th>
+        <th>Kaydet</th>
+      </tr>
+    </thead>
+    <tbody id="talebe-body"></tbody>
+  </table>
+
+  <div class="filtre-alan">
+    <label>İmtihana Girmeyenleri Gör:</label>
+    <select onchange="filtreleDurum(this.value, 'girmedi')">
+      <option value="">Seçiniz</option>
+      <option value="telhis">Telhis</option>
+      <option value="diger">Diğer</option>
+      <option value="kiraat">Kıraat</option>
+    </select>
+    <label>İmtihana Girenleri Gör:</label>
+    <select onchange="filtreleDurum(this.value, 'girdi')">
+      <option value="">Seçiniz</option>
+      <option value="telhis">Telhis</option>
+      <option value="diger">Diğer</option>
+      <option value="kiraat">Kıraat</option>
+    </select>
+  </div>
+  <div class="filtre-sonuc" id="filtre-sonuc"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAm5Nxa0wTeufmf_EUz6dwDj8Kn-VAjuaw",
+      authDomain: "karaagacfatih-e7e5d.firebaseapp.com",
+      projectId: "karaagacfatih-e7e5d",
+      storageBucket: "karaagacfatih-e7e5d.appspot.com",
+      messagingSenderId: "178632701521",
+      appId: "1:178632701521:web:96c496f696a348fad36a70"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const talebeler = [
+      "Abdülmalik", "Adem Korkmaz", "Agit Berat Meke", "Ahmet Selim Kulaç",
+      "Ahmet Yerlikaya", "Ahmet Yusuf Çevik", "Arif İhsan", "Batuhan Açık",
+      "Bedirhan Arslan", "Enes Faruk Kartal", "Enes Tekin", "Fio Alamilhuda Siahaan",
+      "Haidar Kurniawan", "Harun Seçkin", "Hüseyin", "Kayra Semih Büyükyiğit",
+      "Kerem Avcı", "Malik Talha Aydınyılmaz", "Mohd Adil", "Mustafa Arda Öz",
+      "Muzaffer Nefes", "Nanda Rifai", "Naufal", "Naufal Fathurrahman", "Ömer",
+      "Ömer Faruk Yıldız", "Ömer İslam", "Raşit", "Rıdvan Gorgiladze", "Sabri",
+      "Saidafzal Ayyubov", "Yasin Albayrak", "Yasir Mermer", "Yunus", "Zharfan Bin Muhammad Faizal"
+    ];
+
+    const tbody = document.getElementById("talebe-body");
+
+    async function yukleVeriler() {
+      const snapshot = await getDocs(collection(db, "imtihanDurumlari"));
+      const veriler = {};
+      snapshot.forEach(doc => veriler[doc.id] = doc.data());
+
+      talebeler.forEach((isim, index) => {
+        const id = isim.replace(/ /g, '_');
+        const veri = veriler[id] || { telhis: "Girmedi", diger: "Girmedi", kiraat: "Girmedi" };
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td style="text-align: left;">${isim}</td>
+          <td><select class="telhis" onchange="renklendir(this)">${secenek(veri.telhis)}</select></td>
+          <td><select class="diger" onchange="renklendir(this)">${secenek(veri.diger)}</select></td>
+          <td><select class="kiraat" onchange="renklendir(this)">${secenek(veri.kiraat)}</select></td>
+          <td><button class="kaydet" onclick="guncelle('${id}', this)">Kaydet</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      guncelleIstatistik();
+    }
+
+    function secenek(secili) {
+      return [`Girdi`, `Girmedi`].map(v => `<option ${v === secili ? "selected" : ""}>${v}</option>`).join('');
+    }
+
+    window.guncelle = async function (id, btn) {
+      const tr = btn.closest("tr");
+      const veri = {
+        isim: tr.children[1].textContent,
+        telhis: tr.querySelector(".telhis").value,
+        diger: tr.querySelector(".diger").value,
+        kiraat: tr.querySelector(".kiraat").value
+      };
+      await setDoc(doc(db, "imtihanDurumlari", id), veri);
+      guncelleIstatistik();
+      alert("Kaydedildi");
+    };
+
+    window.renklendir = function (sel) {
+      if (sel.value === "Girdi") {
+        sel.classList.add("girdi");
+        sel.classList.remove("girmedi");
+      } else {
+        sel.classList.add("girmedi");
+        sel.classList.remove("girdi");
+      }
+    }
+
+    window.filtreleDurum = async function (alan, durum) {
+      const snapshot = await getDocs(collection(db, "imtihanDurumlari"));
+      let eslesen = [];
+      snapshot.forEach(doc => {
+        const veri = doc.data();
+        if (veri[alan]?.toLowerCase() === durum) {
+          eslesen.push(veri.isim);
+        }
+      });
+      document.getElementById("filtre-sonuc").innerHTML = `<strong>${durum.toUpperCase()} Sayısı: ${eslesen.length}</strong><br>${eslesen.map(t => `- ${t}`).join("<br>")}`;
+    }
+
+    async function guncelleIstatistik() {
+      const snapshot = await getDocs(collection(db, "imtihanDurumlari"));
+      let tGirdi = 0, tKaldi = 0, dGirdi = 0, dKaldi = 0, kGirdi = 0, kKaldi = 0;
+      snapshot.forEach(doc => {
+        const v = doc.data();
+        if (v.telhis === "Girdi") tGirdi++; else tKaldi++;
+        if (v.diger === "Girdi") dGirdi++; else dKaldi++;
+        if (v.kiraat === "Girdi") kGirdi++; else kKaldi++;
+      });
+      document.getElementById("telhis-girdi").innerText = `${tGirdi} girdi`;
+      document.getElementById("telhis-kaldi").innerText = `${tKaldi} kaldı`;
+      document.getElementById("diger-girdi").innerText = `${dGirdi} girdi`;
+      document.getElementById("diger-kaldi").innerText = `${dKaldi} kaldı`;
+      document.getElementById("kiraat-girdi").innerText = `${kGirdi} girdi`;
+      document.getElementById("kiraat-kaldi").innerText = `${kKaldi} kaldı`;
+    }
+
+    yukleVeriler();
+  </script>
+</body>
+</html>

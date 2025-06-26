@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Erişim Engellendi</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .kutucuk {
+      background-color: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      max-width: 420px;
+      width: 90%;
+    }
+    .kutucuk h1 {
+      font-size: 22px;
+      color: #c0392b;
+      margin-bottom: 15px;
+    }
+    .kutucuk p {
+      color: #555;
+      margin-bottom: 25px;
+      font-size: 15px;
+    }
+    button {
+      background-color: #324960;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2a3d4f;
+    }
+    .bildirim {
+      margin-top: 20px;
+      font-size: 14px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="kutucuk">
+    <h1>Bu sayfaya erişim izniniz yoktur</h1>
+    <p>Yetki talebinde bulunmak için aşağıdaki butona tıklayabilirsiniz.</p>
+    <button onclick="erisimiTalepEt()">Erişim Talebi Gönder</button>
+    <div class="bildirim" id="bildirim"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        currentUser = user;
+      }
+    });
+
+    window.erisimiTalepEt = async function () {
+      const bildirim = document.getElementById("bildirim");
+      if (!currentUser) {
+        bildirim.style.color = "red";
+        bildirim.textContent = "Lütfen tekrar giriş yapınız.";
+        return;
+      }
+
+      const sayfa = window.location.pathname.split("/").pop();
+
+      try {
+        // Aynı talep daha önce yapılmış mı kontrol et
+        const q = query(
+          collection(db, "erisim_talepleri"),
+          where("uid", "==", currentUser.uid),
+          where("istedigi_sayfa", "==", sayfa)
+        );
+        const querySnap = await getDocs(q);
+
+        if (!querySnap.empty) {
+          bildirim.style.color = "orange";
+          bildirim.textContent = "Bu sayfa için daha önce erişim talebinde bulundunuz.";
+          return;
+        }
+
+        // Yeni talep ekle
+        await addDoc(collection(db, "erisim_talepleri"), {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          istedigi_sayfa: sayfa,
+          zaman: serverTimestamp(),
+          userAgent: navigator.userAgent
+        });
+
+        bildirim.style.color = "green";
+        bildirim.textContent = "Erişim talebiniz başarıyla gönderildi.";
+      } catch (err) {
+        console.error("Talep gönderilemedi:", err);
+        bildirim.style.color = "red";
+        bildirim.textContent = "Talep gönderilirken bir hata oluştu.";
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Talebe Listesi</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header .baslik {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    header .menu button {
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      margin-left: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .kontrol-paneli {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #fff;
+      padding: 15px;
+      border-bottom: 1px solid #ccc;
+    }
+    .kontrol-paneli button, .kontrol-paneli select {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      cursor: pointer;
+    }
+    .tablo-kapsayici {
+      overflow-x: auto;
+      padding: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #e9ecef;
+    }
+    .filtreler {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .filtreler select {
+      padding: 8px;
+    }
+    @media print {
+      header, .kontrol-paneli, .filtreler {
+        display: none !important;
+      }
+      body {
+        background-color: white;
+      }
+      table {
+        font-size: 12pt;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="baslik">Karaağaç Fatih - Talebe Listesi</div>
+    <div class="menu">
+      <button onclick="window.print()">🖨️ Çıktı Al</button>
+      <button onclick="window.location.href='panel.html'">⬅ Geri Dön</button>
+    </div>
+  </header>
+
+  <div class="kontrol-paneli">
+    <button onclick="talebeEkle()">➕ Talebe Ekle</button>
+    <button onclick="tumunuSil()">🗑️ Tümünü Sil</button>
+    <button onclick="sutunEkle()">📊 Sütun Ekle</button>
+    <button onclick="fontBuyut()">A+</button>
+    <button onclick="fontKucult()">A−</button>
+  </div>
+
+  <div class="filtreler">
+    <select onchange="sirala(this.value)">
+      <option value="">🔢 Sıra</option>
+      <option value="artan">1-35</option>
+      <option value="azalan">35-1</option>
+    </select>
+    <select onchange="siralaIsmeGore(this.value)">
+      <option value="">🔤 İsim</option>
+      <option value="az">A'dan Z'ye</option>
+      <option value="za">Z'den A'ya</option>
+    </select>
+    <select onchange="filtreleMulahaza(this.value)">
+      <option value="">💬 Mülahaza</option>
+      <option value="dolu">Dolu Olanlar</option>
+      <option value="bos">Boş Olanlar</option>
+    </select>
+  </div>
+
+  <div class="tablo-kapsayici">
+    <table id="talebeTablosu">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>İsim</th>
+          <th>Mülahaza</th>
+        </tr>
+      </thead>
+      <tbody id="talebeBody">
+        <!-- Dinamik içerik buraya gelecek -->
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const tbody = document.getElementById("talebeBody");
+
+    let talebeler = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      const snapshot = await getDocs(collection(db, "talebeler"));
+      talebeler = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      tabloyuGuncelle(talebeler);
+    });
+
+    function tabloyuGuncelle(veri) {
+      tbody.innerHTML = "";
+      veri.forEach((t, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${t.isim || ""}</td>
+          <td>${t.mulahaza || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.talebeEkle = async () => {
+      const isim = prompt("Talebe ismi:");
+      if (!isim) return;
+      await addDoc(collection(db, "talebeler"), {
+        isim,
+        mulahaza: "",
+        zaman: serverTimestamp()
+      });
+      location.reload();
+    };
+
+    window.tumunuSil = async () => {
+      if (!confirm("Tüm kayıtları silmek istediğinize emin misiniz?")) return;
+      const snapshot = await getDocs(collection(db, "talebeler"));
+      snapshot.forEach(d => deleteDoc(doc(db, "talebeler", d.id)));
+      location.reload();
+    };
+
+    window.sutunEkle = () => {
+      alert("Bu sürümde dinamik sütun ekleme özelliği admin panelinden yapılacaktır.");
+    };
+
+    window.fontBuyut = () => {
+      document.querySelector("table").style.fontSize = "18px";
+    };
+
+    window.fontKucult = () => {
+      document.querySelector("table").style.fontSize = "14px";
+    };
+
+    window.sirala = (yontem) => {
+      const sirali = [...talebeler].sort((a, b) =>
+        yontem === "artan" ? a.sira - b.sira : b.sira - a.sira
+      );
+      tabloyuGuncelle(sirali);
+    };
+
+    window.siralaIsmeGore = (secim) => {
+      const sirali = [...talebeler].sort((a, b) => {
+        if (!a.isim || !b.isim) return 0;
+        return secim === "az"
+          ? a.isim.localeCompare(b.isim)
+          : b.isim.localeCompare(a.isim);
+      });
+      tabloyuGuncelle(sirali);
+    };
+
+    window.filtreleMulahaza = (durum) => {
+      let filtrelenmis = [];
+      if (durum === "dolu") {
+        filtrelenmis = talebeler.filter(t => t.mulahaza && t.mulahaza.trim() !== "");
+      } else if (durum === "bos") {
+        filtrelenmis = talebeler.filter(t => !t.mulahaza || t.mulahaza.trim() === "");
+      } else {
+        filtrelenmis = talebeler;
+      }
+      tabloyuGuncelle(filtrelenmis);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+/* GENEL AYARLAR */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to right, #1e3c72, #2a5298);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* ANA SAYFA (index.html) */
+.index-container {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    width: calc(100% - 40px);
+    max-width: 600px;
+    box-sizing: border-box;
+}
+
+.index-container h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+.index-container .soz {
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    padding: 0 10px;
+}
+
+.index-container .alinti {
+    display: block;
+    margin-top: 10px;
+    font-style: normal;
+    font-size: 14px;
+    color: #dcdcdc;
+}
+
+.index-container button {
+    padding: 12px 24px;
+    font-size: 16px;
+    background-color: #ffffff;
+    color: #1e3c72;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.index-container button:hover {
+    background-color: #eeeeee;
+}
+
+/* GİRİŞ SAYFASI (login.html) */
+.login-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    width: calc(100% - 40px);
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+    color: white;
+    box-sizing: border-box;
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+}
+
+.login-container input {
+    width: 90%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.login-container button {
+    padding: 12px 24px;
+    font-size: 16px;
+    background-color: #ffffff;
+    color: #1e3c72;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-container button:hover {
+    background-color: #eeeeee;
+}
+
+/* RESPONSIVE: TABLET */
+@media (max-width: 768px) {
+    .index-container h1 {
+        font-size: 22px;
+    }
+
+    .index-container .soz {
+        font-size: 15px;
+    }
+
+    .login-container {
+        padding: 30px 20px;
+    }
+
+    .login-container input,
+    .login-container button {
+        font-size: 15px;
+    }
+}
+
+/* RESPONSIVE: TELEFON */
+@media (max-width: 480px) {
+    .index-container h1 {
+        font-size: 18px;
+    }
+
+    .index-container .soz {
+        font-size: 14px;
+    }
+
+    .login-container {
+        padding: 20px 15px;
+    }
+
+    .login-container input,
+    .login-container button {
+        font-size: 14px;
+    }
+}
+.panel-container {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    width: calc(100% - 40px);
+    max-width: 500px;
+    box-sizing: border-box;
+}
+
+.panel-container h2 {
+    font-size: 24px;
+    margin-bottom: 30px;
+}
+
+.panel-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.panel-buttons button {
+    padding: 14px;
+    font-size: 18px;
+    background-color: #ffffff;
+    color: #1e3c72;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.panel-buttons button:hover {
+    background-color: #eeeeee;
+}
+
+@media (max-width: 480px) {
+    .panel-container h2 {
+        font-size: 20px;
+    }
+
+    .panel-buttons button {
+        font-size: 16px;
+    }
+}
+.panel-detay {
+    text-align: center;
+    padding: 40px;
+    color: white;
+}
+.talebe-container {
+    text-align: center;
+    padding: 40px;
+    color: white;
+}
+
+.talebe-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 400px;
+    margin: 40px auto;
+}
+
+.talebe-menu button {
+    padding: 14px;
+    font-size: 16px;
+    background-color: #ffffff;
+    color: #1e3c72;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.talebe-menu button:hover {
+    background-color: #eeeeee;
+}
+
+@media (max-width: 480px) {
+    .talebe-menu button {
+        font-size: 14px;
+        padding: 12px;
+    }
+}
+.liste-container {
+    padding: 40px;
+    text-align: center;
+    color: white;
+}
+
+.liste-container h1 {
+    margin-bottom: 30px;
+}
+
+table {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border-collapse: collapse;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+table th, table td {
+    padding: 12px;
+    border: 1px solid #ffffff55;
+    color: white;
+    font-size: 16px;
+}
+
+table th {
+    background-color: rgba(255,255,255,0.2);
+}
+
+@media (max-width: 480px) {
+    table th, table td {
+        font-size: 14px;
+        padding: 10px;
+    }
+}

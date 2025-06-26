@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Erişim Talepleri</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+    }
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sol { font-size: 20px; font-weight: bold; }
+    .sag button {
+      margin-left: 10px;
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .tabs button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      border: none;
+      border-bottom: 3px solid transparent;
+      background-color: transparent;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      border-color: #324960;
+      font-weight: bold;
+    }
+    .icerik {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .talep-karti {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .talep-karti h3 { margin: 0; color: #222; }
+    .talep-karti p { margin: 5px 0; color: #555; }
+    .talep-karti button {
+      margin-top: 10px;
+      margin-right: 10px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-izin {
+      background-color: #2ecc71;
+      color: white;
+    }
+    .btn-reddet {
+      background-color: #e74c3c;
+      color: white;
+    }
+    .log-kabul { background: #eafaf1; border-left: 5px solid #2ecc71; }
+    .log-red { background: #fdecea; border-left: 5px solid #e74c3c; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sol">Karaağaç Fatih</div>
+    <div class="sag">
+      <button onclick="alert('Bildirimler yakında!')">🔔</button>
+      <button onclick="alert('Profil yakında!')">👤</button>
+      <button onclick="alert('Ayarlar yakında!')">⚙️</button>
+      <button onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button id="tab-bekleyen" class="active">Bekleyen Talepler</button>
+    <button id="tab-log">İşlem Geçmişi</button>
+  </div>
+
+  <div class="icerik" id="icerik"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const icerikDiv = document.getElementById("icerik");
+    const tabBekleyen = document.getElementById("tab-bekleyen");
+    const tabLog = document.getElementById("tab-log");
+
+    function setActiveTab(tab) {
+      tabBekleyen.classList.remove("active");
+      tabLog.classList.remove("active");
+      tab.classList.add("active");
+    }
+
+    async function yukleBekleyen() {
+      icerikDiv.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "erisim_talepleri"));
+      if (snapshot.empty) {
+        icerikDiv.innerHTML = "<p>Bekleyen talep yok.</p>";
+        return;
+      }
+
+      snapshot.forEach(docSnap => {
+        const veri = docSnap.data();
+        const zaman = veri.zaman?.toDate().toLocaleString("tr-TR") || "Zaman yok";
+        const kart = document.createElement("div");
+        kart.className = "talep-karti";
+        kart.innerHTML = `
+          <h3>${veri.email}</h3>
+          <p><strong>Sayfa:</strong> ${veri.istedigi_sayfa}</p>
+          <p><strong>Tarih:</strong> ${zaman}</p>
+          <button class="btn-izin">İzin Ver</button>
+          <button class="btn-reddet">Reddet</button>
+        `;
+
+        // İzin Ver
+        kart.querySelector(".btn-izin").onclick = async () => {
+          const ref = doc(db, "kullanicilar", veri.uid);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            const izinler = snap.data().izinler || {};
+            izinler[`panel.${veri.istedigi_sayfa.replace(".html", "").replaceAll("-", ".")}`] = true;
+            await updateDoc(ref, { izinler });
+          }
+          await setDoc(doc(db, "erisim_log", docSnap.id), {
+            ...veri,
+            durum: "kabul",
+            islem_zamani: serverTimestamp()
+          });
+          await deleteDoc(doc(db, "erisim_talepleri", docSnap.id));
+          kart.remove();
+        };
+
+        // Reddet
+        kart.querySelector(".btn-reddet").onclick = async () => {
+          await setDoc(doc(db, "erisim_log", docSnap.id), {
+            ...veri,
+            durum: "reddedildi",
+            islem_zamani: serverTimestamp()
+          });
+          await deleteDoc(doc(db, "erisim_talepleri", docSnap.id));
+          kart.remove();
+        };
+
+        icerikDiv.appendChild(kart);
+      });
+    }
+
+    async function yukleLog() {
+      icerikDiv.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "erisim_log"));
+      if (snapshot.empty) {
+        icerikDiv.innerHTML = "<p>İşlem geçmişi yok.</p>";
+        return;
+      }
+
+      snapshot.forEach(docSnap => {
+        const veri = docSnap.data();
+        const zaman = veri.islem_zamani?.toDate().toLocaleString("tr-TR") || "Zaman yok";
+        const kart = document.createElement("div");
+        kart.className = "talep-karti " + (veri.durum === "kabul" ? "log-kabul" : "log-red");
+        kart.innerHTML = `
+          <h3>${veri.email}</h3>
+          <p><strong>Sayfa:</strong> ${veri.istedigi_sayfa}</p>
+          <p><strong>Durum:</strong> ${veri.durum.toUpperCase()}</p>
+          <p><strong>İşlem Tarihi:</strong> ${zaman}</p>
+        `;
+        icerikDiv.appendChild(kart);
+      });
+    }
+
+    tabBekleyen.onclick = () => {
+      setActiveTab(tabBekleyen);
+      yukleBekleyen();
+    };
+
+    tabLog.onclick = () => {
+      setActiveTab(tabLog);
+      yukleLog();
+    };
+
+    window.cikisYap = async function () {
+      await signOut(auth);
+      window.location.href = "index.html";
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) window.location.href = "index.html";
+      else yukleBekleyen();
+    });
+  </script>
+</body>
+</html>

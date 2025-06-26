@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karaağaç Fatih Panel</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+    }
+    header {
+      background-color: #324960;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    header .sol {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    header .sag button {
+      margin-left: 10px;
+      background-color: #4a637d;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .icerik {
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .soz {
+      font-size: 20px;
+      margin-bottom: 30px;
+      color: #333;
+    }
+    .paneller button {
+      display: block;
+      margin: 10px auto;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4a637d;
+      color: white;
+      cursor: pointer;
+      width: 250px;
+    }
+    .paneller button:hover {
+      background-color: #3a5168;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sol">Karaağaç Fatih</div>
+    <div class="sag">
+      <button onclick="alert('Bildirimler yakında!')">🔔</button>
+      <button id="btn-profil">👤</button>
+      <button id="btn-ayarlar">⚙️</button>
+      <button onclick="cikisYap()">Çıkış Yap</button>
+    </div>
+  </header>
+
+  <div class="icerik">
+    <div class="soz">
+      "Yaptığınızı kâfi görüp daha iyisini nasıl yaparız diye kafa yormazsanız sizde iş yok demektir."
+    </div>
+        <div class="soz">
+      Kemal Bey Ağabeyimiz
+    </div>
+    <div class="paneller" id="paneller"></div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+    authDomain: "karaagacfatihdaimi.firebaseapp.com",
+    projectId: "karaagacfatihdaimi",
+    storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+    messagingSenderId: "234282790339",
+    appId: "1:234282790339:web:bdd46748b0b6495550e176",
+    measurementId: "G-6XT79LLYK1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  async function logEkle(user, sayfaAdi) {
+    try {
+      await addDoc(collection(db, "kullanici_log"), {
+        uid: user.uid,
+        email: user.email,
+        sayfa: sayfaAdi,
+        zaman: serverTimestamp(),
+        userAgent: navigator.userAgent
+      });
+    } catch (e) {
+      console.error("Log eklenemedi:", e);
+    }
+  }
+
+  const paneller = document.getElementById("paneller");
+
+  const butonlar = [
+    { kod: "panel.talebe.talebe-liste", metin: "Talebe Listesi", link: "talebe-liste.html" },
+    { kod: "panel.talebe.imtihan", metin: "İmtihan Durumu", link: "imtihan-durumu.html" },
+    { kod: "panel.personel.verim", metin: "Aylık Verim", link: "personel-verim.html" },
+    { kod: "panel.nehari.duzen", metin: "Nehari Paneli", link: "nehari.html" },
+    { kod: "panel.diger.kasa", metin: "Kasa Paneli", link: "kasa.html" },
+    { kod: "panel.kullanici-ekle", metin: "Kullanıcı Ekle", link: "kullanici-ekle.html" }
+  ];
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+
+    await logEkle(user, "panel.html");
+
+    const uid = user.uid;
+    const userRef = doc(db, "kullanicilar", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      window.location.href = "yetki-yok.html";
+      return;
+    }
+
+    const izinler = userSnap.data().izinler || {};
+    let yetkiVar = false;
+
+    butonlar.forEach(btn => {
+      if (izinler[btn.kod]) {
+        yetkiVar = true;
+        const b = document.createElement("button");
+        b.textContent = btn.metin;
+        b.onclick = () => location.href = btn.link;
+        paneller.appendChild(b);
+      }
+    });
+
+    if (!yetkiVar) {
+      paneller.innerHTML = "<p style='color: #777;'>Herhangi bir panele erişim izniniz yok.</p>";
+    }
+
+    // Üst menü
+    document.getElementById("btn-profil").onclick = () => location.href = "profil.html";
+    document.getElementById("btn-ayarlar").onclick = () => location.href = "ayarlar.html";
+  });
+
+  window.cikisYap = async function () {
+    await signOut(auth);
+    window.location.href = "index.html";
+  };
+</script>
+</body>
+</html>

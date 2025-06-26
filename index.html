@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giriş Yap</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .giris-kutu {
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+    .baslik {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .baslik h1 {
+      font-size: 24px;
+      margin: 0;
+      color: #222;
+    }
+    .baslik p {
+      font-size: 15px;
+      color: #555;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .secenekler {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    .giris-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #324960;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .giris-btn:hover {
+      background-color: #2a3d4f;
+    }
+    .alt-links {
+      text-align: center;
+      margin-top: 14px;
+    }
+    .alt-links a {
+      color: #007bff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .alt-links a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 480px) {
+      .giris-kutu {
+        margin: 20px;
+        padding: 25px;
+      }
+      input[type="email"],
+      input[type="password"] {
+        font-size: 14px;
+        padding: 10px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="giris-kutu">
+    <div class="baslik">
+      <h1>Karaağaç Fatih</h1>
+      <p>Daimi Tekâmülaltı</p>
+    </div>
+    <input type="email" id="email" placeholder="E-posta" required />
+    <input type="password" id="password" placeholder="Şifre" required />
+    <div class="secenekler">
+      <input type="checkbox" id="rememberMe" style="margin-right: 6px;" /> Beni Hatırla
+    </div>
+    <button class="giris-btn" onclick="girisYap()">Giriş Yap</button>
+    <div class="alt-links">
+      <a href="#" onclick="sifreSifirla()">Şifremi unuttum</a>
+    </div>
+    <div id="hata" style="color: red; text-align: center; font-size: 14px; margin-top: 10px;"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiOfj0cU0KZ0oJtlezr-gXqFgwGA6hZXE",
+      authDomain: "karaagacfatihdaimi.firebaseapp.com",
+      projectId: "karaagacfatihdaimi",
+      storageBucket: "karaagacfatihdaimi.firebasestorage.app",
+      messagingSenderId: "234282790339",
+      appId: "1:234282790339:web:bdd46748b0b6495550e176",
+      measurementId: "G-6XT79LLYK1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Giriş yapmış kullanıcı varsa direkt yönlendir
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "kullanicilar", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          window.location.href = "panel.html";
+        }
+      }
+    });
+
+    // Giriş işlemi
+    window.girisYap = async function () {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const hataDiv = document.getElementById("hata");
+      hataDiv.style.color = "red";
+      hataDiv.textContent = "";
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+        const userRef = doc(db, "kullanicilar", uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          // ✅ Başarılı giriş logu (verimlilik için)
+          await addDoc(collection(db, "kullanici_log"), {
+            uid: uid,
+            email: email,
+            sayfa: "index.html (Başarılı Giriş)",
+            zaman: serverTimestamp(),
+            userAgent: navigator.userAgent
+          });
+
+          window.location.href = "panel.html";
+        } else {
+          hataDiv.textContent = "Kullanıcı veritabanında bulunamadı.";
+          // 🔴 Logla
+          await addDoc(collection(db, "giris_deneme_log"), {
+            email: email,
+            durum: "Kullanıcı veritabanında yok",
+            zaman: serverTimestamp(),
+            userAgent: navigator.userAgent
+          });
+        }
+      } catch (error) {
+        hataDiv.textContent = "E-posta veya şifre hatalı.";
+        // 🔴 Logla
+        await addDoc(collection(db, "giris_deneme_log"), {
+          email: email,
+          durum: "Şifre veya e-posta hatalı",
+          zaman: serverTimestamp(),
+          userAgent: navigator.userAgent
+        });
+      }
+    };
+
+    // Şifre sıfırlama işlemi
+    window.sifreSifirla = async function () {
+      const email = document.getElementById("email").value;
+      const hataDiv = document.getElementById("hata");
+      if (!email) {
+        hataDiv.textContent = "Lütfen e-posta adresinizi giriniz.";
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        hataDiv.style.color = "green";
+        hataDiv.textContent = "Şifre sıfırlama bağlantısı gönderildi.";
+
+        // Logla
+        await addDoc(collection(db, "giris_deneme_log"), {
+          email: email,
+          durum: "Şifre sıfırlama isteği gönderildi",
+          zaman: serverTimestamp(),
+          userAgent: navigator.userAgent
+        });
+      } catch (error) {
+        hataDiv.style.color = "red";
+        hataDiv.textContent = "Şifre sıfırlama başarısız.";
+
+        await addDoc(collection(db, "giris_deneme_log"), {
+          email: email,
+          durum: "Şifre sıfırlama başarısız",
+          zaman: serverTimestamp(),
+          userAgent: navigator.userAgent
+        });
+      }
+    };
+  </script>
+</body>
+</html>
